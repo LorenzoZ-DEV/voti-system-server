@@ -251,7 +251,7 @@ async function handleSubmit(event) {
     console.error('[handleSubmit] error', err);
     showToast({
       title: 'Errore salvataggio',
-      message: err.message || 'Non è stato possibile aggiungere il voto.',
+      message: err.message || 'Non è stato possibile aggiungere il voto. Codice di Errore: 10',
       type: 'error'
     });
   } finally {
@@ -339,7 +339,7 @@ async function updateSummary() {
 
     const payload = await response.json();
     if (!payload.ok) {
-      throw new Error(payload.error || 'Errore durante il caricamento del riepilogo');
+      throw new Error(payload.error || 'Errore durante il caricamento del riepilogo Codice di Errore: 02');
     }
 
     const summary = payload.summary || {};
