@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dashboard Voti</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="container" role="main">
+    <h1>Dashboard Voti</h1>
+
+    <section class="add-form">
+      <h2>Aggiungi voto</h2>
+      <form id="gradeForm">
+        <label>
+          <span class="field-label">Materia</span>
+          <input type="text" id="subject" required />
+        </label>
+        <label>
+          <span class="field-label">Voto (es. 6.5)</span>
+          <input type="number" step="0.25" id="value" required />
+        </label>
+        <label>
+          <span class="field-label">Peso (opzionale, default 1)</span>
+          <input type="number" step="0.1" id="weight" />
+        </label>
+        <label>
+          <span class="field-label">Nota (opzionale)</span>
+          <input type="text" id="note" />
+        </label>
+        <button type="submit">Aggiungi</button>
+      </form>
+    </section>
+
+    <section class="summary" id="summary" aria-live="polite">
+      <h2>Riepilogo</h2>
+      <div id="overall" class="summary-overall">
+        <span class="summary-overall__label">Media generale</span>
+        <span class="summary-overall__value" data-overall-value>—</span>
+      </div>
+      <div class="summary-meta">
+        <span class="summary-meta__item">
+          <span class="summary-meta__value" data-total-grades>0</span>
+          <span class="summary-meta__label">voti registrati</span>
+        </span>
+      </div>
+      <div id="perSubject" class="summary-per-subject"></div>
+    </section>
+
+    <section class="list" id="list" aria-live="polite">
+      <h2>Voti</h2>
+      <table>
+        <thead>
+          <tr><th>Materia</th><th>Voto</th><th>Peso</th><th>Nota</th><th>Data</th><th>Azioni</th></tr>
+        </thead>
+        <tbody id="gradesTable"></tbody>
+      </table>
+      <p class="empty-state" data-empty-state hidden>
+        Nessun voto registrato. Aggiungi il primo utilizzando il modulo qui sopra.
+      </p>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
