@@ -8,8 +8,15 @@
 </head>
 <body>
   <main class="container" role="main">
-    <h1>Dashboard Voti</h1>
-
+    <header class="topbar">
+      <h1>Dashboard Voti</h1>
+      <div class="topbar-actions">
+        <button type="button" class="btn-theme" data-theme-toggle aria-pressed="false" title="Attiva modalità scura">
+          <span class="btn-theme__icon" aria-hidden="true">🌙</span>
+          <span class="btn-theme__text" data-theme-label>Modalità scura</span>
+        </button>
+      </div>
+    </header>
     <section class="add-form">
       <h2>Aggiungi voto</h2>
       <form id="gradeForm">

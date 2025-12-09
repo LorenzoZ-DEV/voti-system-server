@@ -13,6 +13,18 @@
   --color-text: #0f172a;
   --color-muted: #6b7280;
   --color-success: #0f766e;
+  --color-positive-strong: #0f766e;
+  --color-positive-soft: rgba(16, 185, 129, 0.18);
+  --color-positive-border: rgba(16, 185, 129, 0.28);
+  --color-warning-strong: #b45309;
+  --color-warning-soft: rgba(245, 158, 11, 0.22);
+  --color-warning-border: rgba(245, 158, 11, 0.32);
+  --color-negative-strong: #b91c1c;
+  --color-negative-soft: rgba(248, 113, 113, 0.22);
+  --color-negative-border: rgba(248, 113, 113, 0.32);
+  --color-info-strong: #1d4ed8;
+  --color-info-soft: rgba(37, 99, 235, 0.12);
+  --color-info-border: rgba(37, 99, 235, 0.28);
   --shadow-lg: 0 28px 50px -30px rgba(15, 23, 42, 0.38);
   --shadow-md: 0 20px 36px -26px rgba(15, 23, 42, 0.28);
   --shadow-sm: 0 14px 24px -18px rgba(15, 23, 42, 0.16);
@@ -39,6 +51,80 @@ body {
   justify-content: center;
 }
 
+/* Dark theme - toggle with class `theme-dark` on <body> */
+.theme-dark {
+  color-scheme: dark;
+  --color-bg-gradient: linear-gradient(180deg, #081226 0%, #071526 45%, #041019 100%);
+  --color-surface: rgba(8, 12, 20, 0.75);
+  --color-surface-strong: #071022;
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-divider: rgba(255, 255, 255, 0.04);
+  --color-primary: #60a5fa;
+  --color-primary-strong: #3b82f6;
+  --color-accent: #38bdf8;
+  --color-text: #e6eef8;
+  --color-muted: #98a2b3;
+  --color-success: #34d399;
+  --color-positive-strong: #34d399;
+  --color-positive-soft: rgba(52, 211, 153, 0.18);
+  --color-positive-border: rgba(52, 211, 153, 0.32);
+  --color-warning-strong: #facc15;
+  --color-warning-soft: rgba(250, 204, 21, 0.2);
+  --color-warning-border: rgba(250, 204, 21, 0.38);
+  --color-negative-strong: #f87171;
+  --color-negative-soft: rgba(248, 113, 113, 0.24);
+  --color-negative-border: rgba(248, 113, 113, 0.38);
+  --color-info-strong: #60a5fa;
+  --color-info-soft: rgba(96, 165, 250, 0.18);
+  --color-info-border: rgba(96, 165, 250, 0.36);
+  --shadow-lg: 0 28px 50px -30px rgba(2,6,23,0.6);
+  --shadow-md: 0 20px 36px -26px rgba(2,6,23,0.55);
+  --shadow-sm: 0 14px 24px -18px rgba(2,6,23,0.35);
+}
+
+/* topbar */
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+
+.topbar-actions{display:flex;gap:8px;align-items:center}
+
+.btn-theme{
+  height:40px;
+  padding:6px 10px;
+  border-radius:10px;
+  border:1px solid var(--color-border);
+  background:var(--color-surface-strong);
+  color:var(--color-text);
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  transition:transform var(--transition-base),background var(--transition-base);
+}
+
+.btn-theme:hover{transform:translateY(-2px)}
+
+.btn-theme:focus-visible{
+  outline:3px solid rgba(37,99,235,0.25);
+  outline-offset:2px;
+}
+
+.btn-theme__icon{
+  font-size:1.2rem;
+  line-height:1;
+}
+
+.btn-theme__text{
+  font-size:0.85rem;
+  font-weight:600;
+}
+
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
 body::before {
   content: '';
   position: fixed;
@@ -49,6 +135,13 @@ body::before {
     radial-gradient(40% 40% at 70% 0%, rgba(14, 165, 233, 0.18), transparent 70%),
     radial-gradient(50% 50% at 90% 70%, rgba(79, 70, 229, 0.12), transparent 80%);
   pointer-events: none;
+}
+
+body.theme-dark::before {
+  background:
+    radial-gradient(60% 60% at 10% 20%, rgba(96, 165, 250, 0.16), transparent 70%),
+    radial-gradient(40% 40% at 70% 0%, rgba(14, 165, 233, 0.18), transparent 70%),
+    radial-gradient(50% 50% at 90% 70%, rgba(59, 130, 246, 0.22), transparent 80%);
 }
 
 .container {
@@ -195,6 +288,18 @@ section > h2 {
   color: var(--color-primary-strong);
 }
 
+.summary-overall__value.tone-positive {
+  color: var(--color-positive-strong);
+}
+
+.summary-overall__value.tone-warning {
+  color: var(--color-warning-strong);
+}
+
+.summary-overall__value.tone-negative {
+  color: var(--color-negative-strong);
+}
+
 .summary-meta {
   display: flex;
   flex-wrap: wrap;
@@ -249,6 +354,21 @@ section > h2 {
   transition: transform var(--transition-base), box-shadow var(--transition-base);
 }
 
+.summary-per-subject .subject-card.tone-positive {
+  background: var(--color-positive-soft);
+  border-color: var(--color-positive-border);
+}
+
+.summary-per-subject .subject-card.tone-warning {
+  background: var(--color-warning-soft);
+  border-color: var(--color-warning-border);
+}
+
+.summary-per-subject .subject-card.tone-negative {
+  background: var(--color-negative-soft);
+  border-color: var(--color-negative-border);
+}
+
 .summary-per-subject .subject-card:hover {
   transform: translateY(-3px);
   box-shadow: var(--shadow-md);
@@ -266,6 +386,18 @@ section > h2 {
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--color-text);
+}
+
+.summary-per-subject .subject-card.tone-positive strong {
+  color: var(--color-positive-strong);
+}
+
+.summary-per-subject .subject-card.tone-warning strong {
+  color: var(--color-warning-strong);
+}
+
+.summary-per-subject .subject-card.tone-negative strong {
+  color: var(--color-negative-strong);
 }
 
 .summary-per-subject .subject-card small {
@@ -316,6 +448,40 @@ section > h2 {
   padding: 16px 18px;
   font-size: 0.95rem;
   color: var(--color-text);
+}
+
+.grade-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1;
+  border: 1px solid transparent;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--color-text);
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base), border-color var(--transition-base);
+}
+
+.grade-pill.tone-positive {
+  background: var(--color-positive-soft);
+  border-color: var(--color-positive-border);
+  color: var(--color-positive-strong);
+}
+
+.grade-pill.tone-warning {
+  background: var(--color-warning-soft);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning-strong);
+}
+
+.grade-pill.tone-negative {
+  background: var(--color-negative-soft);
+  border-color: var(--color-negative-border);
+  color: var(--color-negative-strong);
 }
 
 .list tbody tr:hover {
@@ -390,6 +556,17 @@ small {
 @media (max-width: 720px) {
   body {
     padding: clamp(20px, 8vw, 48px) clamp(14px, 5vw, 32px);
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   section {
@@ -565,18 +742,21 @@ small {
 }
 
 .toast--success {
-  border-color: rgba(16, 185, 129, 0.35);
-  background: rgba(16, 185, 129, 0.12);
+  border-color: var(--color-positive-border);
+  background: var(--color-positive-soft);
+  color: var(--color-positive-strong);
 }
 
 .toast--info {
-  border-color: rgba(37, 99, 235, 0.28);
-  background: rgba(37, 99, 235, 0.12);
+  border-color: var(--color-info-border);
+  background: var(--color-info-soft);
+  color: var(--color-info-strong);
 }
 
 .toast--error {
-  border-color: rgba(239, 68, 68, 0.32);
-  background: rgba(239, 68, 68, 0.12);
+  border-color: var(--color-negative-border);
+  background: var(--color-negative-soft);
+  color: var(--color-negative-strong);
 }
 
 @keyframes toast-in {

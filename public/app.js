@@ -7,12 +7,18 @@ const ui = {
   emptyState: null,
   emptyStateDefault: '',
   form: null,
-  toastRegion: null
+  toastRegion: null,
+  themeToggle: null
 };
 
 const state = {
-  lastSummary: null
+  lastSummary: null,
+  theme: 'light',
+  hasManualTheme: false
 };
+
+const THEME_STORAGE_KEY = 'voti-dashboard-theme';
+let systemThemeMedia = null;
 
 function init() {
   ui.tableBody = document.getElementById('gradesTable');
@@ -21,6 +27,12 @@ function init() {
   ui.totalGrades = document.querySelector('[data-total-grades]');
   ui.emptyState = document.querySelector('[data-empty-state]');
   ui.form = document.getElementById('gradeForm');
+  ui.themeToggle = document.querySelector('[data-theme-toggle]');
+  initializeTheme();
+  if (ui.themeToggle) {
+    ui.themeToggle.addEventListener('click', handleThemeToggleClick);
+  }
+
   ui.toastRegion = ensureToastRegion();
 
   if (ui.emptyState) {
@@ -92,11 +104,14 @@ function renderGrades(grades) {
     const noteText = grade.note ? escapeHtml(grade.note) : '—';
     const dateText = escapeHtml(formatDate(grade.createdAt || grade.date));
     const gradeId = grade.id ?? grade.ID ?? grade.rowid ?? grade.rowId ?? null;
+    const tone = getGradeTone(grade.value);
+    const toneClass = tone && tone !== 'neutral' ? `tone-${tone}` : '';
     const actionCellContent = gradeId != null
       ? `<button type="button" class="delete" data-id="${gradeId}">Elimina</button>`
       : '—';
 
     const tr = document.createElement('tr');
+    tr.className = 'grade-row';
     if (gradeId != null) {
       tr.dataset.gradeId = String(gradeId);
     }
@@ -106,9 +121,13 @@ function renderGrades(grades) {
     if (Number.isFinite(Number(grade.value))) {
       tr.dataset.value = String(grade.value);
     }
+    if (toneClass) {
+      tr.dataset.tone = tone;
+    }
+
     tr.innerHTML = `
       <td data-label="Materia">${subjectText}</td>
-      <td data-label="Voto">${valueText}</td>
+      <td data-label="Voto"><span class="grade-pill ${toneClass}">${valueText}</span></td>
       <td data-label="Peso">${weightText}</td>
       <td data-label="Nota">${noteText}</td>
       <td data-label="Data">${dateText}</td>
@@ -287,6 +306,25 @@ function escapeHtml(s){
     .replace(/'/g, '&#039;');
 }
 
+const TONE_CLASSNAMES = ['tone-positive', 'tone-warning', 'tone-negative'];
+
+function getGradeTone(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 'neutral';
+  if (numeric >= 6) return 'positive';
+  if (numeric >= 5) return 'warning';
+  return 'negative';
+}
+
+function applyToneClass(element, tone) {
+  if (!element) return;
+  TONE_CLASSNAMES.forEach((cls) => element.classList.remove(cls));
+  if (!tone || tone === 'neutral') return;
+  const targetClass = `tone-${tone}`;
+  if (!TONE_CLASSNAMES.includes(targetClass)) return;
+  element.classList.add(targetClass);
+}
+
 async function updateSummary() {
   if (!ui.perSubject || !ui.overallValue) return;
 
@@ -308,11 +346,12 @@ async function updateSummary() {
     const overallAverage = Number(summary.overallAverage);
     const perSubject = Array.isArray(summary.perSubject) ? summary.perSubject : [];
     const totalGrades = Number.isFinite(Number(summary.totalGrades)) ? Number(summary.totalGrades) : perSubject.reduce((acc, item) => acc + (item.count || 0), 0);
+    const hasGrades = totalGrades > 0 && Number.isFinite(overallAverage);
 
-    ui.overallValue.textContent = formatNumber(overallAverage, {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 2
-    });
+    ui.overallValue.textContent = hasGrades
+      ? formatNumber(overallAverage, { minimumFractionDigits: 1, maximumFractionDigits: 2 })
+      : '—';
+    applyToneClass(ui.overallValue, hasGrades ? getGradeTone(overallAverage) : 'neutral');
 
     if (ui.totalGrades) {
       ui.totalGrades.textContent = `${totalGrades}`;
@@ -322,7 +361,7 @@ async function updateSummary() {
 
     if (!perSubject.length) {
       ui.perSubject.classList.add('empty');
-      state.lastSummary = { overallAverage, perSubject, totalGrades };
+      state.lastSummary = { overallAverage: hasGrades ? overallAverage : null, perSubject, totalGrades };
       return;
     }
 
@@ -331,8 +370,10 @@ async function updateSummary() {
       .slice()
       .sort((a, b) => a.subject.localeCompare(b.subject, 'it', { sensitivity: 'accent' }))
       .forEach((item) => {
+        const tone = getGradeTone(item.average);
+        const toneClass = tone && tone !== 'neutral' ? `tone-${tone}` : '';
         const card = document.createElement('div');
-        card.className = 'subject-card';
+        card.className = `subject-card ${toneClass}`.trim();
         card.innerHTML = `
           <span>${escapeHtml(item.subject)}</span>
           <strong>${formatNumber(item.average, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</strong>
@@ -341,10 +382,11 @@ async function updateSummary() {
         ui.perSubject.appendChild(card);
       });
 
-    state.lastSummary = { overallAverage, perSubject, totalGrades };
+    state.lastSummary = { overallAverage: hasGrades ? overallAverage : null, perSubject, totalGrades };
   } catch (err) {
     console.error('[updateSummary] error', err);
     ui.overallValue.textContent = '—';
+    applyToneClass(ui.overallValue, 'neutral');
     ui.perSubject.innerHTML = '';
     ui.perSubject.classList.add('empty');
     if (ui.totalGrades) {
@@ -409,4 +451,105 @@ function showToast({ title, message, meta, type = 'info' } = {}) {
   });
 
   setTimeout(close, TOAST_TIMEOUT);
+}
+
+// Theme helpers -----------------------------------------------------------
+
+function initializeTheme() {
+  const storedTheme = readStoredTheme();
+  state.hasManualTheme = Boolean(storedTheme);
+
+  if (!systemThemeMedia && window.matchMedia) {
+    try {
+      systemThemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+      if (typeof systemThemeMedia.addEventListener === 'function') {
+        systemThemeMedia.addEventListener('change', handleSystemThemeChange);
+      } else if (typeof systemThemeMedia.addListener === 'function') {
+        systemThemeMedia.addListener(handleSystemThemeChange);
+      }
+    } catch (err) {
+      systemThemeMedia = null;
+    }
+  }
+
+  const initialTheme = storedTheme
+    || (systemThemeMedia && systemThemeMedia.matches ? 'dark' : 'light');
+
+  applyTheme(initialTheme, { persist: Boolean(storedTheme), announce: false });
+}
+
+function handleThemeToggleClick(event) {
+  event.preventDefault();
+  const nextTheme = state.theme === 'dark' ? 'light' : 'dark';
+  state.hasManualTheme = true;
+  applyTheme(nextTheme, { persist: true, announce: true });
+}
+
+function handleSystemThemeChange(event) {
+  if (state.hasManualTheme) return;
+  const nextTheme = event.matches ? 'dark' : 'light';
+  if (state.theme === nextTheme) return;
+  applyTheme(nextTheme, { persist: false, announce: true });
+}
+
+function applyTheme(theme, { persist = true, announce = false } = {}) {
+  const isDark = theme === 'dark';
+  state.theme = isDark ? 'dark' : 'light';
+
+  document.body.classList.toggle('theme-dark', isDark);
+  document.body.dataset.theme = state.theme;
+
+  if (persist) {
+    persistThemePreference(state.theme);
+  }
+
+  updateThemeToggle(state.theme);
+
+  if (announce) {
+    showToast({
+      title: 'Tema aggiornato',
+      message: isDark ? 'Modalità scura attivata' : 'Modalità chiara attivata',
+      type: 'info'
+    });
+  }
+}
+
+function updateThemeToggle(theme) {
+  const button = ui.themeToggle || document.querySelector('[data-theme-toggle]');
+  if (!button) return;
+
+  const isDark = theme === 'dark';
+  button.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+  button.setAttribute('aria-label', isDark ? 'Attiva modalità chiara' : 'Attiva modalità scura');
+  button.title = isDark ? 'Attiva modalità chiara' : 'Attiva modalità scura';
+
+  const icon = button.querySelector('.btn-theme__icon');
+  const label = button.querySelector('[data-theme-label]');
+
+  if (icon) {
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  if (label) {
+    label.textContent = isDark ? 'Modalità chiara' : 'Modalità scura';
+  }
+}
+
+function readStoredTheme() {
+  try {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === 'light' || stored === 'dark') {
+      return stored;
+    }
+  } catch (err) {
+    console.warn('[theme] impossibile leggere la preferenza tema', err);
+  }
+  return null;
+}
+
+function persistThemePreference(theme) {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch (err) {
+    console.warn('[theme] impossibile salvare la preferenza tema', err);
+  }
 }
