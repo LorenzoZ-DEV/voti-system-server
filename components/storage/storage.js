@@ -2,7 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 
 const STORAGE = (process.env.STORAGE || 'sqlite').toLowerCase();
-// Percorsi
+// Percorsi file 
 const JSON_FILE = path.join(__dirname, 'data.json');
 const SQLITE_FILE = path.join(__dirname, 'grades.db');
 
@@ -14,7 +14,6 @@ async function init() {
     try {
       await fs.access(JSON_FILE);
     } catch {
-      // crea file iniziale
       await fs.writeFile(JSON_FILE, JSON.stringify({ grades: [], nextId: 1 }, null, 2), 'utf8');
     }
     return;

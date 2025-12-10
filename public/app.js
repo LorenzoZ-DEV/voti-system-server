@@ -8,13 +8,15 @@ const ui = {
   emptyStateDefault: '',
   form: null,
   toastRegion: null,
-  themeToggle: null
+  themeToggle: null,
+  logoutButton: null
 };
 
 const state = {
   lastSummary: null,
   theme: 'light',
-  hasManualTheme: false
+  hasManualTheme: false,
+  redirecting: false
 };
 
 const THEME_STORAGE_KEY = 'voti-dashboard-theme';
@@ -28,9 +30,13 @@ function init() {
   ui.emptyState = document.querySelector('[data-empty-state]');
   ui.form = document.getElementById('gradeForm');
   ui.themeToggle = document.querySelector('[data-theme-toggle]');
+  ui.logoutButton = document.querySelector('[data-logout]');
   initializeTheme();
   if (ui.themeToggle) {
     ui.themeToggle.addEventListener('click', handleThemeToggleClick);
+  }
+  if (ui.logoutButton) {
+    ui.logoutButton.addEventListener('click', handleLogoutClick);
   }
 
   ui.toastRegion = ensureToastRegion();
@@ -52,6 +58,24 @@ if (document.readyState === 'loading') {
   init();
 }
 
+function redirectToLogin({ reason } = {}) {
+  if (state.redirecting) return;
+  state.redirecting = true;
+  const params = new URLSearchParams();
+  if (reason) {
+    params.set('reason', reason);
+  }
+  const target = params.size ? `/login?${params.toString()}` : '/login';
+  window.location.replace(target);
+}
+
+function maybeRedirectUnauthorized(response, { reason = 'session-expired' } = {}) {
+  if (!response || typeof response.status !== 'number') return false;
+  if (response.status !== 401) return false;
+  redirectToLogin({ reason });
+  return true;
+}
+
 async function fetchGrades() {
   if (!ui.tableBody) return [];
 
@@ -59,6 +83,14 @@ async function fetchGrades() {
     const response = await fetch('/api/grades', {
       headers: { Accept: 'application/json' }
     });
+
+    if (maybeRedirectUnauthorized(response)) {
+      return [];
+    }
+
+    if (maybeRedirectUnauthorized(response)) {
+      return;
+    }
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
@@ -79,10 +111,12 @@ async function fetchGrades() {
     toggleEmptyState(true, 'Impossibile caricare i voti. Riprova più tardi.');
     return [];
   } finally {
-    try {
-      await updateSummary();
-    } catch (summaryErr) {
-      console.error(summaryErr);
+    if (!state.redirecting) {
+      try {
+        await updateSummary();
+      } catch (summaryErr) {
+        console.error(summaryErr);
+      }
     }
   }
 }
@@ -185,7 +219,41 @@ async function handleDeleteClick(event) {
       type: 'error'
     });
   } finally {
-    if (button.isConnected) {
+    if (!state.redirecting && button.isConnected) {
+      button.removeAttribute('aria-busy');
+      button.disabled = false;
+    }
+  }
+}
+
+async function handleLogoutClick(event) {
+  const button = event.currentTarget;
+  if (!button) return;
+
+  button.disabled = true;
+  button.setAttribute('aria-busy', 'true');
+
+  try {
+    const response = await fetch('/api/logout', { method: 'POST' });
+
+    if (maybeRedirectUnauthorized(response, { reason: 'session-expired' })) {
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    redirectToLogin({ reason: 'logout' });
+  } catch (err) {
+    console.error('[handleLogoutClick] error', err);
+    showToast({
+      title: 'Errore logout',
+      message: 'Impossibile terminare la sessione. Riprova.',
+      type: 'error'
+    });
+  } finally {
+    if (!state.redirecting) {
       button.removeAttribute('aria-busy');
       button.disabled = false;
     }
@@ -233,6 +301,10 @@ async function handleSubmit(event) {
       body: JSON.stringify(payload)
     });
 
+    if (maybeRedirectUnauthorized(response)) {
+      return;
+    }
+
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}));
       throw new Error(errorBody.error || `HTTP ${response.status}`);
@@ -255,7 +327,7 @@ async function handleSubmit(event) {
       type: 'error'
     });
   } finally {
-    if (submitButton) {
+    if (submitButton && !state.redirecting) {
       submitButton.disabled = false;
       submitButton.removeAttribute('aria-busy');
     }
@@ -327,11 +399,16 @@ function applyToneClass(element, tone) {
 
 async function updateSummary() {
   if (!ui.perSubject || !ui.overallValue) return;
+  if (state.redirecting) return;
 
   try {
     const response = await fetch('/api/summary', {
       headers: { Accept: 'application/json' }
     });
+
+    if (maybeRedirectUnauthorized(response)) {
+      return;
+    }
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
